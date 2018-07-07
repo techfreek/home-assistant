@@ -204,20 +204,21 @@ class HueOneLightChangeView(HomeAssistantView):
         entity_features = entity.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
 
         if entity.domain == "light":
-            if entity_features & SUPPORT_BRIGHTNESS:
-                if parsed[STATE_BRIGHTNESS] is not None:
-                    data[ATTR_BRIGHTNESS] = parsed[STATE_BRIGHTNESS]
-            if entity_features & SUPPORT_COLOR:
-                if parsed[STATE_HUE] is not None:
-                    sat = parsed[STATE_SATURATION] if parsed[STATE_SATURATION] else HUE_API_STATE_SAT_MAX
-                    hue = parsed[STATE_HUE]
+            if parsed[STATE_ON]:
+                if entity_features & SUPPORT_BRIGHTNESS:
+                    if parsed[STATE_BRIGHTNESS] is not None:
+                        data[ATTR_BRIGHTNESS] = parsed[STATE_BRIGHTNESS]
+                if entity_features & SUPPORT_COLOR:
+                    if parsed[STATE_HUE] is not None:
+                        sat = parsed[STATE_SATURATION] if parsed[STATE_SATURATION] else 0
+                        hue = parsed[STATE_HUE]
 
-                    # Convert hs values to hass hs values
-                    sat = int((sat / HUE_API_STATE_SAT_MAX) * 100)
-                    hue = int((hue / HUE_API_STATE_HUE_MAX) * 360)
-                    rgb = color_util.color_hs_to_RGB(hue, sat)
-                    _LOGGER.info("hue: %d, sat: %d -> rgb: %s" % (hue, sat, repr(rgb)))
-                    data[ATTR_RGB_COLOR] = rgb
+                        # Convert hs values to hass hs values
+                        sat = int((sat / HUE_API_STATE_SAT_MAX) * 100)
+                        hue = int((hue / HUE_API_STATE_HUE_MAX) * 360)
+                        rgb = color_util.color_hs_to_RGB(hue, sat)
+                        _LOGGER.info("hue: %d, sat: %d -> rgb: %s" % (hue, sat, repr(rgb)))
+                        data[ATTR_RGB_COLOR] = rgb
             if entity_features & SUPPORT_TRANSITION:
                 if parsed[STATE_TIME] is not None:
                     # Convert STATE_TIME (multiples of 100ms) to ATTR_TRANSITION (seconds)
@@ -369,9 +370,8 @@ def parse_hue_api_put_light_body(request_json, entity):
             return None
 
         if entity.domain == "light":
-            if entity_features & SUPPORT_BRIGHTNESS:
-                data[STATE_ON] = (data[STATE_BRIGHTNESS] > 0)
-            else:
+            data[STATE_ON] = (data[STATE_BRIGHTNESS] > 0)
+            if (entity_features & SUPPORT_BRIGHTNESS) == False:
                 data[STATE_BRIGHTNESS] = None
 
         elif entity.domain == "scene":
