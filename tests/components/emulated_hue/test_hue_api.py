@@ -166,12 +166,13 @@ def test_discover_lights(hue_client):
 @asyncio.coroutine
 def test_get_light_state(hass_hue, hue_client):
     """Test the getting of light state."""
-    # Turn office light on and set to 127 brightness
+    # Turn office light on and set to 127 brightness, and set light color
     yield from hass_hue.services.async_call(
         light.DOMAIN, const.SERVICE_TURN_ON,
         {
             const.ATTR_ENTITY_ID: 'light.ceiling_lights',
-            light.ATTR_BRIGHTNESS: 127
+            light.ATTR_BRIGHTNESS: 127,
+            light.ATTR_RGB_COLOR: (1, 2, 7)
         },
         blocking=True)
 
@@ -180,6 +181,8 @@ def test_get_light_state(hass_hue, hue_client):
 
     assert office_json['state'][HUE_API_STATE_ON] is True
     assert office_json['state'][HUE_API_STATE_BRI] == 127
+    assert office_json['state'][HUE_API_STATE_HUE] == 116
+    assert office_json['state'][HUE_API_STATE_SAT] == 2
 
     # Check all lights view
     result = yield from hue_client.get('/api/username/lights')
@@ -206,6 +209,8 @@ def test_get_light_state(hass_hue, hue_client):
 
     assert office_json['state'][HUE_API_STATE_ON] is False
     assert office_json['state'][HUE_API_STATE_BRI] == 0
+    assert office_json['state'][HUE_API_STATE_HUE] == 0
+    assert office_json['state'][HUE_API_STATE_SAT] == 0
 
     # Make sure bedroom light isn't accessible
     yield from perform_get_light_state(
