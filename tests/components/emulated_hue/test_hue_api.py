@@ -14,7 +14,8 @@ from homeassistant.components import (
     fan, http, light, script, emulated_hue, media_player, cover)
 from homeassistant.components.emulated_hue import Config
 from homeassistant.components.emulated_hue.hue_api import (
-    HUE_API_STATE_ON, HUE_API_STATE_BRI, HueUsernameView, HueOneLightStateView,
+    HUE_API_STATE_ON, HUE_API_STATE_BRI, HUE_API_STATE_HUE, HUE_API_STATE_SAT,
+    HueUsernameView, HueOneLightStateView,
     HueAllLightsStateView, HueOneLightChangeView, HueAllGroupsStateView)
 from homeassistant.const import STATE_ON, STATE_OFF
 
@@ -194,12 +195,14 @@ def test_discover_lights(hue_client):
 @asyncio.coroutine
 def test_get_light_state(hass_hue, hue_client):
     """Test the getting of light state."""
-    # Turn office light on and set to 127 brightness
+    # Turn office light on and set to 127 brightness, and set light color
     yield from hass_hue.services.async_call(
         light.DOMAIN, const.SERVICE_TURN_ON,
         {
             const.ATTR_ENTITY_ID: 'light.ceiling_lights',
-            light.ATTR_BRIGHTNESS: 127
+            light.ATTR_BRIGHTNESS: 127,
+            light.ATTR_RGB_COLOR: (1, 2, 7),
+            light.ATTR_TRANSITION: 2
         },
         blocking=True)
 
@@ -208,6 +211,8 @@ def test_get_light_state(hass_hue, hue_client):
 
     assert office_json['state'][HUE_API_STATE_ON] is True
     assert office_json['state'][HUE_API_STATE_BRI] == 127
+    assert office_json['state'][HUE_API_STATE_HUE] == 41869
+    assert office_json['state'][HUE_API_STATE_SAT] == 217
 
     # Check all lights view
     result = yield from hue_client.get('/api/username/lights')
@@ -234,6 +239,8 @@ def test_get_light_state(hass_hue, hue_client):
 
     assert office_json['state'][HUE_API_STATE_ON] is False
     assert office_json['state'][HUE_API_STATE_BRI] == 0
+    assert office_json['state'][HUE_API_STATE_HUE] == 0
+    assert office_json['state'][HUE_API_STATE_SAT] == 0
 
     # Make sure bedroom light isn't accessible
     yield from perform_get_light_state(
