@@ -221,7 +221,7 @@ class HueOneLightChangeView(HomeAssistantView):
                         hue = int((hue / HUE_API_STATE_HUE_MAX) * 360)
                         rgb = color_util.color_hs_to_RGB(hue, sat)
                         _LOGGER.info("hue: %d, sat: %d -> rgb: %s" %
-                                    (hue, sat, repr(rgb)))
+                                        (hue, sat, repr(rgb)))
 
                         data[ATTR_RGB_COLOR] = rgb
             if entity_features & SUPPORT_TRANSITION:
@@ -316,6 +316,7 @@ class HueOneLightChangeView(HomeAssistantView):
 
 
 def parse_hue_api_put_light_body(request_json, entity):
+    """Parse the body of a request to change the state of a light."""
     data = {
         STATE_BRIGHTNESS: None,
         STATE_HUE: None,
@@ -329,7 +330,7 @@ def parse_hue_api_put_light_body(request_json, entity):
 
     _LOGGER.info("%s" % repr(request_json))
 
-    """Parse the body of a request to change the state of a light."""
+
     if HUE_API_STATE_ON in request_json:
         if not isinstance(request_json[HUE_API_STATE_ON], bool):
             return None

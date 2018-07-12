@@ -13,7 +13,8 @@ from homeassistant.components import (
     fan, http, light, script, emulated_hue, media_player)
 from homeassistant.components.emulated_hue import Config
 from homeassistant.components.emulated_hue.hue_api import (
-    HUE_API_STATE_ON, HUE_API_STATE_BRI, HueUsernameView, HueOneLightStateView,
+    HUE_API_STATE_ON, HUE_API_STATE_BRI, HUE_API_STATE_HUE, HUE_API_STATE_SAT,
+    HUE_API_STATE_TIME, HueUsernameView, HueOneLightStateView,
     HueAllLightsStateView, HueOneLightChangeView)
 from homeassistant.const import STATE_ON, STATE_OFF
 
