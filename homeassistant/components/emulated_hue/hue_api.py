@@ -210,18 +210,25 @@ class HueOneLightChangeView(HomeAssistantView):
                         data[ATTR_BRIGHTNESS] = parsed[STATE_BRIGHTNESS]
                 if entity_features & SUPPORT_COLOR:
                     if parsed[STATE_HUE] is not None:
-                        sat = parsed[STATE_SATURATION] if parsed[STATE_SATURATION] else 0
+                        if parsed[STATE_SATURATION]:
+                            sat = parsed[STATE_SATURATION]
+                        else:
+                            sat = 0
                         hue = parsed[STATE_HUE]
 
                         # Convert hs values to hass hs values
                         sat = int((sat / HUE_API_STATE_SAT_MAX) * 100)
                         hue = int((hue / HUE_API_STATE_HUE_MAX) * 360)
                         rgb = color_util.color_hs_to_RGB(hue, sat)
-                        _LOGGER.info("hue: %d, sat: %d -> rgb: %s" % (hue, sat, repr(rgb)))
+                        _LOGGER.info("hue: %d, sat: %d -> rgb: %s" %
+                                    (hue, sat, repr(rgb)))
+
                         data[ATTR_RGB_COLOR] = rgb
             if entity_features & SUPPORT_TRANSITION:
                 if parsed[STATE_TIME] is not None:
-                    # Convert STATE_TIME (multiples of 100ms) to ATTR_TRANSITION (seconds)
+                    # Hue API STATE_TIME is multiples of 100ms
+                    # ATTR_TRANSITION is seconds
+                    # Convert STATE_TIME to ATTR_TRANSITION
                     data[ATTR_TRANSITION] = parsed[STATE_TIME] / 10
 
         # If the requested entity is a script add some variables
@@ -289,7 +296,8 @@ class HueOneLightChangeView(HomeAssistantView):
             domain, service, data, blocking=True))
 
         json_response = \
-            [create_hue_success_response(entity_id, HUE_API_STATE_ON, parsed[STATE_ON])]
+            [create_hue_success_response(
+                entity_id, HUE_API_STATE_ON, parsed[STATE_ON])]
 
         if parsed[STATE_BRIGHTNESS] is not None:
             json_response.append(create_hue_success_response(
@@ -371,7 +379,7 @@ def parse_hue_api_put_light_body(request_json, entity):
 
         if entity.domain == "light":
             data[STATE_ON] = (data[STATE_BRIGHTNESS] > 0)
-            if (entity_features & SUPPORT_BRIGHTNESS) == False:
+            if not entity_features & SUPPORT_BRIGHTNESS:
                 data[STATE_BRIGHTNESS] = None
 
         elif entity.domain == "scene":
