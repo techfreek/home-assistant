@@ -14,8 +14,8 @@ from homeassistant.components import (
 from homeassistant.components.emulated_hue import Config
 from homeassistant.components.emulated_hue.hue_api import (
     HUE_API_STATE_ON, HUE_API_STATE_BRI, HUE_API_STATE_HUE, HUE_API_STATE_SAT,
-    HUE_API_STATE_TIME, HueUsernameView, HueOneLightStateView,
-    HueAllLightsStateView, HueOneLightChangeView)
+    HueUsernameView, HueOneLightStateView, HueAllLightsStateView,
+    HueOneLightChangeView)
 from homeassistant.const import STATE_ON, STATE_OFF
 
 HTTP_SERVER_PORT = get_test_instance_port()
@@ -173,7 +173,8 @@ def test_get_light_state(hass_hue, hue_client):
         {
             const.ATTR_ENTITY_ID: 'light.ceiling_lights',
             light.ATTR_BRIGHTNESS: 127,
-            light.ATTR_RGB_COLOR: (1, 2, 7)
+            light.ATTR_RGB_COLOR: (1, 2, 7),
+            light.ATTR_TRANSITION: 2
         },
         blocking=True)
 
