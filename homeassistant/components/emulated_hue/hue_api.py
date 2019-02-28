@@ -10,8 +10,8 @@ from homeassistant.const import (
     HTTP_BAD_REQUEST, HTTP_NOT_FOUND, ATTR_SUPPORTED_FEATURES,
 )
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_RGB_COLOR,
-    SUPPORT_BRIGHTNESS, SUPPORT_COLOR,
+    ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_RGB_COLOR, ATTR_TRANSITION,
+    SUPPORT_BRIGHTNESS, SUPPORT_COLOR, SUPPORT_TRANSITION
 )
 from homeassistant.components.media_player.const import (
     ATTR_MEDIA_VOLUME_LEVEL, SUPPORT_VOLUME_SET,
@@ -41,6 +41,7 @@ HUE_API_STATE_ON = 'on'
 HUE_API_STATE_BRI = 'bri'
 HUE_API_STATE_HUE = 'hue'
 HUE_API_STATE_SAT = 'sat'
+HUE_API_STATE_TIME = 'transitiontime'
 
 HUE_API_STATE_HUE_MAX = 65535
 HUE_API_STATE_SAT_MAX = 254
@@ -49,6 +50,7 @@ HUE_API_STATE_BRI_MAX = 255
 STATE_BRIGHTNESS = HUE_API_STATE_BRI
 STATE_HUE = HUE_API_STATE_HUE
 STATE_SATURATION = HUE_API_STATE_SAT
+STATE_TIME = HUE_API_STATE_TIME
 
 
 class HueUsernameView(HomeAssistantView):
@@ -278,6 +280,16 @@ class HueOneLightChangeView(HomeAssistantView):
                         rgb = color_util.color_hs_to_RGB(hue, sat)
                         data[ATTR_RGB_COLOR] = rgb
 
+            if entity_features & SUPPORT_TRANSITION:
+                if parsed[STATE_TIME] is not None:
+                    # Hue API STATE_TIME is multiples of 100ms
+                    # ATTR_TRANSITION is seconds
+                    # Convert STATE_TIME to ATTR_TRANSITION
+                    data[ATTR_TRANSITION] = parsed[STATE_TIME] / 10
+            else:
+                if parsed[STATE_TIME] is not None:
+                    raise Exception("wahtever")
+
         # If the requested entity is a script add some variables
         elif entity.domain == script.DOMAIN:
             data['variables'] = {
@@ -307,7 +319,7 @@ class HueOneLightChangeView(HomeAssistantView):
                 service = SERVICE_CLOSE_COVER
 
             if entity_features & SUPPORT_SET_POSITION:
-                if brightness is not None:
+                if parsed[STATE_BRIGHTNESS] is not None:
                     domain = entity.domain
                     service = SERVICE_SET_COVER_POSITION
                     data[ATTR_POSITION] = parsed[STATE_BRIGHTNESS]
@@ -361,6 +373,9 @@ class HueOneLightChangeView(HomeAssistantView):
         if parsed[STATE_SATURATION] is not None:
             json_response.append(create_hue_success_response(
                 entity_id, HUE_API_STATE_SAT, parsed[STATE_SATURATION]))
+        if parsed[STATE_TIME] is not None:
+            json_response.append(create_hue_success_response(
+                entity_id, HUE_API_STATE_TIME, parsed[STATE_TIME]))
 
         return self.json(json_response)
 
@@ -371,6 +386,7 @@ def parse_hue_api_put_light_body(request_json, entity):
         STATE_BRIGHTNESS: None,
         STATE_HUE: None,
         STATE_ON: False,
+        STATE_TIME: None,
         STATE_SATURATION: None,
     }
 
@@ -389,6 +405,15 @@ def parse_hue_api_put_light_body(request_json, entity):
             # Echo requested device be turned off
             data[STATE_BRIGHTNESS] = None
             data[STATE_ON] = False
+
+    if HUE_API_STATE_TIME in request_json:
+        try:
+            # Clamp time from 0 to 10
+            data[STATE_TIME] = \
+                max(0, min(int(request_json[HUE_API_STATE_TIME]), 10))
+
+        except ValueError:
+            return None
 
     if HUE_API_STATE_HUE in request_json:
         try:
@@ -444,6 +469,7 @@ def get_entity_state(config, entity):
         STATE_BRIGHTNESS: None,
         STATE_HUE: None,
         STATE_ON: False,
+        STATE_TIME: None,
         STATE_SATURATION: None
     }
 
@@ -463,6 +489,9 @@ def get_entity_state(config, entity):
             data[STATE_BRIGHTNESS] = 0
             data[STATE_HUE] = 0
             data[STATE_SATURATION] = 0
+
+        # convert seconds back to multiples of 100ms
+        data[STATE_TIME] = entity.attributes.get(ATTR_TRANSITION, 0) * 10
 
         # Make sure the entity actually supports brightness
         entity_features = entity.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
@@ -517,6 +546,7 @@ def entity_to_json(config, entity, state):
             HUE_API_STATE_BRI: state[STATE_BRIGHTNESS],
             HUE_API_STATE_HUE: state[STATE_HUE],
             HUE_API_STATE_SAT: state[STATE_SATURATION],
+            HUE_API_STATE_TIME: state[STATE_TIME],
             'reachable': True
         },
         'type': 'Dimmable light',
